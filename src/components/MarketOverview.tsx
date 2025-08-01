@@ -14,7 +14,7 @@ export default function MarketOverview() {
   const markets = useMemo(() => data?.markets || [], [data])
   
   const orderedMarkets = useMemo(() => {
-    return markets.sort((a, b) => {
+    return [...markets].sort((a, b) => {
       const aFav = favorites.includes(a.symbol)
       const bFav = favorites.includes(b.symbol)
       if (aFav && !bFav) return -1

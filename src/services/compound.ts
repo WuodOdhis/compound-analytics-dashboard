@@ -10,10 +10,12 @@ const COMPOUND_MARKETS = {
 export class CompoundService {
   private provider: ethers.Provider
   private mockMode: boolean = false
+  private requestTimeoutMs: number = 3000
 
   constructor() {
     const rpcUrl = process.env.RPC_URL || 'https://cloudflare-eth.com'
     this.provider = new ethers.JsonRpcProvider(rpcUrl)
+    this.mockMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
     this.testConnection()
   }
 
@@ -47,6 +49,15 @@ export class CompoundService {
     }
 
     try {
+      const withTimeout = <T>(promise: Promise<T>): Promise<T> => {
+        return new Promise<T>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Request timed out')), this.requestTimeoutMs)
+          promise
+            .then((value) => { clearTimeout(timeout); resolve(value) })
+            .catch((err) => { clearTimeout(timeout); reject(err) })
+        })
+      }
+
       const marketPromises = Object.entries(COMPOUND_MARKETS).map(async ([symbol, address]) => {
         const contract = new ethers.Contract(
           address,
@@ -67,15 +78,15 @@ export class CompoundService {
           reserves,
           price
         ] = await Promise.all([
-          contract.getUtilization(),
-          contract.totalSupply(),
-          contract.totalBorrow(),
-          contract.getReserves(),
-          contract.getPrice(address)
+          withTimeout(contract.getUtilization()),
+          withTimeout(contract.totalSupply()),
+          withTimeout(contract.totalBorrow()),
+          withTimeout(contract.getReserves()),
+          withTimeout(contract.getPrice(address))
         ])
 
-        const borrowRate = await contract.getBorrowRate(utilization)
-        const supplyRate = await contract.getSupplyRate(utilization)
+        const borrowRate = await withTimeout(contract.getBorrowRate(utilization))
+        const supplyRate = await withTimeout(contract.getSupplyRate(utilization))
 
         return {
           symbol,

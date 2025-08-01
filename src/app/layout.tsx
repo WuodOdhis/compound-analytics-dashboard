@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { QueryProvider } from '../providers/QueryProvider'
 import { ThemeProvider } from '../providers/ThemeProvider'
+import { QueryProvider } from '../providers/QueryProvider'
 import { SettingsProvider } from '../providers/SettingsProvider'
 import { Web3Provider } from '../providers/Web3Provider'
 

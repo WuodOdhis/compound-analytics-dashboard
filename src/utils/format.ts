@@ -1,27 +1,24 @@
-export function formatCurrency(value: number): string {
-  // Convert to absolute value to handle negative numbers
-  const absValue = Math.abs(value)
-  
-  // Handle trillions
-  if (absValue >= 1_000_000_000_000) {
-    return `$${(value / 1_000_000_000_000).toFixed(2)}T`
+export function formatCurrency(num: number): string {
+  const trillion = 1e12;
+  const billion = 1e9;
+  const million = 1e6;
+  const thousand = 1e3;
+
+  if (num >= trillion) {
+    const t = num / trillion;
+    return `$${t < 10 ? t.toFixed(2) : t.toFixed(1)}T`;
   }
-  
-  // Handle billions
-  if (absValue >= 1_000_000_000) {
-    return `$${(value / 1_000_000_000).toFixed(2)}B`
+  if (num >= billion) {
+    const b = num / billion;
+    return `$${b < 10 ? b.toFixed(2) : b.toFixed(1)}B`;
   }
-  
-  // Handle millions
-  if (absValue >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(2)}M`
+  if (num >= million) {
+    const m = num / million;
+    return `$${m < 10 ? m.toFixed(2) : m.toFixed(1)}M`;
   }
-  
-  // Handle thousands
-  if (absValue >= 1_000) {
-    return `$${(value / 1_000).toFixed(2)}K`
+  if (num >= thousand) {
+    const k = num / thousand;
+    return `$${k < 10 ? k.toFixed(2) : k.toFixed(1)}K`;
   }
-  
-  // Handle small numbers
-  return `$${value.toFixed(2)}`
+  return `$${num.toFixed(2)}`;
 }
