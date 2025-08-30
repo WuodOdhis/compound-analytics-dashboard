@@ -10,6 +10,7 @@ import PortfolioTracker from '@/components/PortfolioTracker'
 import { useMarketStats } from '@/hooks/useCompoundData'
 import { useTheme } from '@/providers/ThemeProvider'
 import { useSettings } from '@/providers/SettingsProvider'
+import ConnectWallet from '@/components/ConnectWallet'
 
 export default function Dashboard() {
   const { stats, isLoading } = useMarketStats()
@@ -69,6 +70,7 @@ export default function Dashboard() {
                   <span>Refresh</span>
                 </button>
               </div>
+              <ConnectWallet />
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700"

@@ -4,6 +4,7 @@ import './globals.css'
 import { QueryProvider } from '../providers/QueryProvider'
 import { ThemeProvider } from '../providers/ThemeProvider'
 import { SettingsProvider } from '../providers/SettingsProvider'
+import { Web3Provider } from '../providers/Web3Provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,13 +21,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider>
-          <SettingsProvider>
-            <QueryProvider>
-              {children}
-            </QueryProvider>
-          </SettingsProvider>
-        </ThemeProvider>
+        <Web3Provider>
+          <ThemeProvider>
+            <SettingsProvider>
+              <QueryProvider>
+                {children}
+              </QueryProvider>
+            </SettingsProvider>
+          </ThemeProvider>
+        </Web3Provider>
       </body>
     </html>
   )
