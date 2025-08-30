@@ -1,82 +1,93 @@
 'use client'
 
-import { createContext, useContext, useMemo, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-export type RefetchInterval = 15000 | 30000 | 60000
+type RefetchInterval = 1000 | 5000 | 10000 | 30000 | 60000
 
-interface AlertThresholds {
-  utilizationHighPct: number // e.g., 85
-  rateChangePct: number      // e.g., 1.0
-  arbitrageSpreadPct: number // e.g., 2.0
+interface Thresholds {
+  utilization: number
+  supplyApy: number
+  borrowApy: number
+  rateChange: number
 }
 
-interface SettingsContextValue {
+interface SettingsContextType {
   refetchInterval: RefetchInterval
-  setRefetchInterval: (v: RefetchInterval) => void
-  thresholds: AlertThresholds
-  setThresholds: (t: AlertThresholds) => void
+  setRefetchInterval: (interval: RefetchInterval) => void
   favorites: string[]
   toggleFavorite: (symbol: string) => void
   lastUpdated: number | null
-  setLastUpdated: (n: number) => void
+  setLastUpdated: (timestamp: number) => void
+  thresholds: Thresholds
+  setThresholds: (thresholds: Thresholds) => void
 }
 
-const SettingsContext = createContext<SettingsContextValue | undefined>(undefined)
+const defaultThresholds: Thresholds = {
+  utilization: 0.8, // 80%
+  supplyApy: 0.1,   // 10%
+  borrowApy: 0.2,   // 20%
+  rateChange: 0.1   // 10% change
+}
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
+
+export function SettingsProvider({ children }: { children: ReactNode }) {
   const [refetchInterval, setRefetchInterval] = useState<RefetchInterval>(30000)
-  const [thresholds, setThresholds] = useState<AlertThresholds>({
-    utilizationHighPct: 85,
-    rateChangePct: 1.0,
-    arbitrageSpreadPct: 2.0,
-  })
   const [favorites, setFavorites] = useState<string[]>([])
   const [lastUpdated, setLastUpdated] = useState<number | null>(null)
+  const [thresholds, setThresholds] = useState<Thresholds>(defaultThresholds)
 
   useEffect(() => {
-    const stored = localStorage.getItem('settings')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        if (parsed.refetchInterval) setRefetchInterval(parsed.refetchInterval)
-        if (parsed.thresholds) setThresholds(parsed.thresholds)
-        if (parsed.favorites) setFavorites(parsed.favorites)
-      } catch {}
+    const savedSettings = localStorage.getItem('dashboardSettings')
+    if (savedSettings) {
+      const { 
+        refetchInterval: savedInterval, 
+        favorites: savedFavorites,
+        thresholds: savedThresholds 
+      } = JSON.parse(savedSettings)
+      
+      if (savedInterval) setRefetchInterval(savedInterval as RefetchInterval)
+      if (savedFavorites) setFavorites(savedFavorites)
+      if (savedThresholds) setThresholds(savedThresholds)
     }
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('settings', JSON.stringify({ refetchInterval, thresholds, favorites }))
-  }, [refetchInterval, thresholds, favorites])
+    localStorage.setItem('dashboardSettings', JSON.stringify({ 
+      refetchInterval, 
+      favorites,
+      thresholds 
+    }))
+  }, [refetchInterval, favorites, thresholds])
 
   const toggleFavorite = (symbol: string) => {
-    setFavorites(prev => prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol])
+    setFavorites(prev => 
+      prev.includes(symbol)
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol]
+    )
   }
 
-  const value = useMemo(() => ({
-    refetchInterval,
-    setRefetchInterval,
-    thresholds,
-    setThresholds,
-    favorites,
-    toggleFavorite,
-    lastUpdated,
-    setLastUpdated,
-  }), [refetchInterval, thresholds, favorites, lastUpdated])
-
   return (
-    <SettingsContext.Provider value={value}>
+    <SettingsContext.Provider value={{
+      refetchInterval,
+      setRefetchInterval,
+      favorites,
+      toggleFavorite,
+      lastUpdated,
+      setLastUpdated,
+      thresholds,
+      setThresholds
+    }}>
       {children}
     </SettingsContext.Provider>
   )
 }
 
 export function useSettings() {
-  const ctx = useContext(SettingsContext)
-  if (!ctx) throw new Error('useSettings must be used within SettingsProvider')
-  return ctx
+  const context = useContext(SettingsContext)
+  if (context === undefined) {
+    throw new Error('useSettings must be used within a SettingsProvider')
+  }
+  return context
 }
-
-
-
-

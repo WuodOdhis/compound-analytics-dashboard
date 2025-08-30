@@ -1,34 +1,44 @@
 'use client'
 
-import { ReactNode, useMemo } from 'react'
-import { WagmiConfig, createConfig } from 'wagmi'
-import { mainnet, sepolia } from 'wagmi/chains'
-import { http } from 'viem'
-import { coinbaseWallet, injected, walletConnect } from '@wagmi/connectors'
+import { WagmiProvider, createConfig } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { type ReactNode } from 'react'
+import { injected, walletConnect, coinbaseWallet } from '@wagmi/connectors'
+import { mainnet, sepolia } from 'viem/chains'
+import { createPublicClient, http } from 'viem'
+
+// Create a client outside component to prevent multiple initializations
+const queryClient = new QueryClient()
+
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'default-project-id'
+
+// Create wagmi config outside component
+const config = createConfig({
+  chains: [mainnet, sepolia],
+  connectors: [
+    injected(),
+    walletConnect({ 
+      projectId,
+      showQrModal: true,
+    }),
+    coinbaseWallet({ appName: 'Compound Analytics' })
+  ],
+  client: ({ chain }) =>
+    createPublicClient({
+      chain,
+      transport: http(),
+      batch: {
+        multicall: true
+      }
+    })
+})
 
 export function Web3Provider({ children }: { children: ReactNode }) {
-  const rpcUrl = process.env.RPC_URL || 'https://cloudflare-eth.com'
-
-  const config = useMemo(() => {
-    const transports: Record<number, ReturnType<typeof http>> = {
-      [mainnet.id]: http(rpcUrl),
-      [sepolia.id]: http('https://rpc.sepolia.org'),
-    }
-
-    return createConfig({
-      chains: [mainnet, sepolia],
-      transports,
-      connectors: [
-        injected({ shimDisconnect: true }),
-        walletConnect({ projectId: 'demo', showQrModal: true }),
-        coinbaseWallet({ appName: 'Compound Analytics' }),
-      ],
-      multiInjectedProviderDiscovery: true,
-      ssr: true,
-    })
-  }, [rpcUrl])
-
-  return <WagmiConfig config={config}>{children}</WagmiConfig>
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    </WagmiProvider>
+  )
 }
-
-

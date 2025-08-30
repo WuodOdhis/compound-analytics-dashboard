@@ -1,26 +1,21 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, TrendingUp, TrendingDown, DollarSign, Zap, X } from 'lucide-react'
-import { useAllMarketsData } from '../hooks/useCompoundData'
+import { useAllMarketsData } from '@/hooks/useCompoundData'
 import { useSettings } from '@/providers/SettingsProvider'
+import { Bell } from 'lucide-react'
+import { MarketData } from '@/types/market'
 
 interface SmartAlert {
   id: string
-  type: 'opportunity' | 'warning' | 'rate_change' | 'yield_opportunity'
-  title: string
+  type: 'yield_opportunity' | 'risk_warning' | 'rate_change' | 'market_update'
   message: string
-  market: string
-  value: number
-  change?: number
   timestamp: number
-  priority: 'low' | 'medium' | 'high'
 }
 
 export default function AlertSystem() {
-  const { data: markets, isLoading } = useAllMarketsData()
+  const { data } = useAllMarketsData()
   const [alerts, setAlerts] = useState<SmartAlert[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [previousData, setPreviousData] = useState<any>(null)
@@ -28,251 +23,110 @@ export default function AlertSystem() {
 
   // Generate smart alerts based on market data
   useEffect(() => {
-    if (!markets || markets.length === 0 || isLoading) return
+    if (!data?.markets) return
+    
+    const list = data.markets
+    const generated: SmartAlert[] = []
 
-    const newAlerts: SmartAlert[] = []
-
-    markets.forEach(market => {
+    for (const market of list) {
       // High yield opportunities
-      if (market.supplyRate > thresholds.arbitrageSpreadPct + 6) {
-        newAlerts.push({
+      if (market.supplyApy > thresholds.supplyApy) {
+        generated.push({
           id: `yield-${market.symbol}-${Date.now()}`,
           type: 'yield_opportunity',
-          title: 'High Yield Opportunity',
-          message: `${market.symbol} offering ${(market.supplyRate).toFixed(2)}% APY`,
-          market: market.symbol,
-          value: market.supplyRate,
-          timestamp: Date.now(),
-          priority: 'high'
+          message: `High supply APY (${(market.supplyApy * 100).toFixed(2)}%) available in ${market.symbol} market`,
+          timestamp: Date.now()
         })
       }
 
-      // Rate change alerts (compared to previous data)
-      if (previousData) {
-        const prevMarket = previousData.find((m: any) => m.symbol === market.symbol)
+      // High utilization warnings
+      if (market.utilization > thresholds.utilization) {
+        generated.push({
+          id: `util-${market.symbol}-${Date.now()}`,
+          type: 'risk_warning',
+          message: `High utilization (${(market.utilization * 100).toFixed(2)}%) in ${market.symbol} market`,
+          timestamp: Date.now()
+        })
+      }
+
+      // Rate changes
+      if (previousData?.markets) {
+        const prevMarket = previousData.markets.find((m: MarketData) => m.symbol === market.symbol)
         if (prevMarket) {
-          const supplyRateChange = market.supplyRate - prevMarket.supplyRate
-          const borrowRateChange = market.borrowRate - prevMarket.borrowRate
-
-          if (Math.abs(supplyRateChange) > thresholds.rateChangePct) {
-            newAlerts.push({
-              id: `rate-change-${market.symbol}-${Date.now()}`,
+          const borrowRateChange = Math.abs(market.borrowApy - prevMarket.borrowApy)
+          if (borrowRateChange > thresholds.rateChange) {
+            generated.push({
+              id: `rate-${market.symbol}-${Date.now()}`,
               type: 'rate_change',
-              title: 'Rate Change Alert',
-              message: `${market.symbol} supply rate ${supplyRateChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(supplyRateChange).toFixed(2)}%`,
-              market: market.symbol,
-              value: market.supplyRate,
-              change: supplyRateChange,
-              timestamp: Date.now(),
-              priority: Math.abs(supplyRateChange) > 1 ? 'high' : 'medium'
-            })
-          }
-
-          if (Math.abs(borrowRateChange) > thresholds.rateChangePct) {
-            newAlerts.push({
-              id: `borrow-rate-${market.symbol}-${Date.now()}`,
-              type: 'rate_change',
-              title: 'Borrow Rate Alert',
-              message: `${market.symbol} borrow rate ${borrowRateChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(borrowRateChange).toFixed(2)}%`,
-              market: market.symbol,
-              value: market.borrowRate,
-              change: borrowRateChange,
-              timestamp: Date.now(),
-              priority: Math.abs(borrowRateChange) > 1 ? 'high' : 'medium'
+              message: `Significant rate change in ${market.symbol} market`,
+              timestamp: Date.now()
             })
           }
         }
       }
-
-      // Utilization warnings
-      if (market.utilization * 100 > thresholds.utilizationHighPct) {
-        newAlerts.push({
-          id: `utilization-${market.symbol}-${Date.now()}`,
-          type: 'warning',
-          title: 'High Utilization Warning',
-          message: `${market.symbol} utilization at ${(market.utilization * 100).toFixed(1)}%`,
-          market: market.symbol,
-          value: market.utilization * 100,
-          timestamp: Date.now(),
-          priority: market.utilization > 0.95 ? 'high' : 'medium'
-        })
-      }
-
-      // Arbitrage opportunities (when borrow rate < supply rate)
-      const netRate = market.supplyRate - market.borrowRate
-      if (netRate > thresholds.arbitrageSpreadPct) {
-        newAlerts.push({
-          id: `arbitrage-${market.symbol}-${Date.now()}`,
-          type: 'opportunity',
-          title: 'Arbitrage Opportunity',
-          message: `Potential arbitrage in ${market.symbol}: ${(netRate).toFixed(2)}% spread`,
-          market: market.symbol,
-          value: netRate,
-          timestamp: Date.now(),
-          priority: 'high'
-        })
-      }
-    })
-
-    // Update alerts (keep only recent ones)
-    setAlerts(prev => {
-      const combined = [...newAlerts, ...prev]
-      return combined.slice(0, 10) // Keep latest 10 alerts
-    })
-
-    // Store current data for comparison
-    setPreviousData(markets)
-
-    // Auto-show notifications for high priority alerts
-    if (newAlerts.some(alert => alert.priority === 'high')) {
-      setShowNotifications(true)
     }
-  }, [markets, isLoading, previousData])
 
-  const dismissAlert = (id: string) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id))
-  }
+    setAlerts(prev => [...generated, ...prev].slice(0, 10)) // Keep last 10 alerts
+    setPreviousData(data)
+  }, [data, thresholds])
 
-  const getAlertIcon = (type: SmartAlert['type']) => {
-    switch (type) {
-      case 'yield_opportunity':
-        return <TrendingUp className="h-4 w-4 text-green-400" />
-      case 'opportunity':
-        return <DollarSign className="h-4 w-4 text-blue-400" />
-      case 'rate_change':
-        return <TrendingUp className="h-4 w-4 text-yellow-400" />
-      case 'warning':
-        return <Zap className="h-4 w-4 text-red-400" />
-      default:
-        return <Bell className="h-4 w-4 text-slate-400" />
-    }
-  }
+  if (typeof window === 'undefined') return null
 
-  const getPriorityColor = (priority: SmartAlert['priority']) => {
-    switch (priority) {
-      case 'high':
-        return 'border-red-400/50 bg-red-500/10'
-      case 'medium':
-        return 'border-yellow-400/50 bg-yellow-500/10'
-      case 'low':
-        return 'border-blue-400/50 bg-blue-500/10'
-      default:
-        return 'border-slate-400/50 bg-slate-500/10'
-    }
-  }
-
-  const activeAlerts = alerts.filter(alert =>
-    Date.now() - alert.timestamp < 5 * 60 * 1000 // Show alerts from last 5 minutes
+  const notificationPanel = (
+    <div 
+      className={`fixed top-16 right-6 w-96 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[9999] transition-all duration-300 ${
+        showNotifications ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
+      }`}
+    >
+      <div className="p-4 border-b border-slate-700">
+        <h3 className="text-lg font-semibold">Notifications</h3>
+      </div>
+      <div className="max-h-[70vh] overflow-y-auto">
+        {alerts.length > 0 ? (
+          <div className="divide-y divide-slate-700">
+            {alerts.map(alert => (
+              <div key={alert.id} className="p-4 hover:bg-slate-700/50">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm">{alert.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(alert.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded ${
+                    alert.type === 'yield_opportunity' ? 'bg-green-900/50 text-green-400' :
+                    alert.type === 'risk_warning' ? 'bg-red-900/50 text-red-400' :
+                    'bg-blue-900/50 text-blue-400'
+                  }`}>
+                    {alert.type.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center text-gray-400">
+            No notifications
+          </div>
+        )}
+      </div>
+    </div>
   )
 
-  // Create a portal container so the panel escapes stacking contexts
-  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null)
-
-  useEffect(() => {
-    const el = document.createElement('div')
-    el.id = 'alert-portal'
-    document.body.appendChild(el)
-    setPortalEl(el)
-    return () => {
-      try { document.body.removeChild(el) } catch {}
-    }
-  }, [])
-
   return (
-    <div className="relative z-[60]">
-      {/* Alert Bell */}
+    <>
       <button
         onClick={() => setShowNotifications(!showNotifications)}
-        className="relative p-2 bg-slate-800/80 rounded-lg border border-slate-700 hover:bg-slate-700/80 transition-colors antialiased"
+        className="fixed top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-full shadow-lg transition-colors z-[60]"
       >
-        <Bell className="h-5 w-5 text-slate-300" />
-        {activeAlerts.length > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-            {activeAlerts.length}
+        <Bell className="w-5 h-5" />
+        {alerts.length > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+            {alerts.length}
           </span>
         )}
       </button>
-
-      {/* Notification Panel */}
-      {showNotifications && portalEl && createPortal(
-        <div className="fixed top-16 right-6 w-96 max-h-96 overflow-y-auto bg-slate-800/95 rounded-lg border border-slate-700 shadow-xl z-[99999] antialiased">
-          <div className="p-4 border-b border-slate-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-white font-medium">Smart Alerts</h3>
-              <button
-                onClick={() => setShowNotifications(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="p-2">
-            {activeAlerts.length === 0 ? (
-              <div className="text-center py-8">
-                <Bell className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">No active alerts</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {activeAlerts.map(alert => (
-                  <div
-                    key={alert.id}
-                    className={`p-3 rounded-lg border ${getPriorityColor(alert.priority)}`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        {getAlertIcon(alert.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-white font-medium text-sm">{alert.title}</p>
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                            alert.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                            alert.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                            'bg-blue-500/20 text-blue-400'
-                          }`}>
-                            {alert.priority}
-                          </span>
-                        </div>
-                        <p className="text-slate-300 text-sm mt-1">{alert.message}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-slate-400 text-xs">{alert.market}</span>
-                          <div className="flex items-center space-x-2">
-                            {alert.change && (
-                              <span className={`text-xs font-medium ${
-                                alert.change > 0 ? 'text-green-400' : 'text-red-400'
-                              }`}>
-                                {alert.change > 0 ? '+' : ''}{alert.change.toFixed(2)}%
-                              </span>
-                            )}
-                            <span className="text-slate-400 text-xs">
-                              {new Date(alert.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => dismissAlert(alert.id)}
-                        className="text-slate-400 hover:text-white flex-shrink-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>,
-        portalEl
-      )}
-
-      {/* Floating Alert Badges */}
-      {activeAlerts.filter(a => a.priority === 'high').length > 0 && !showNotifications && (
-        <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-      )}
-    </div>
+      {createPortal(notificationPanel, document.body)}
+    </>
   )
 }
