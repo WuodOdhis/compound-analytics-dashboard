@@ -1,18 +1,18 @@
 # Compound Analytics Dashboard
 
-🚀 **Award-Winning Hackathon Submission** 🚀
+ **Award-Winning Hackathon Submission** 
 
 A comprehensive, real-time analytics dashboard for Compound v3 markets featuring advanced risk monitoring, multi-market support, and beautiful visualizations. Built for DeFi power users and institutions.
 
-## ✨ Features
+##  Features
 
-- **📊 Real-time Market Analytics** - Live utilization rates, supply/borrow APYs across all Compound markets
-- **📈 Interactive Charts** - Historical trends with Recharts visualizations
-- **⚠️ Risk Monitoring** - Advanced risk alerts and liquidation warnings
-- **🌐 Multi-Market Support** - USDC, WETH, WBTC, UNI, LINK, and more
-- **📱 Responsive Design** - Modern UI with dark mode and mobile optimization
-- **🔄 Live Updates** - Real-time data with 30-second refresh intervals
-- **🎯 Portfolio Tracking** - User position monitoring and analysis
+- ** Real-time Market Analytics** - Live utilization rates, supply/borrow APYs across all Compound markets
+- ** Interactive Charts** - Historical trends with Recharts visualizations
+- ** Risk Monitoring** - Advanced risk alerts and liquidation warnings
+- ** Multi-Market Support** - USDC, WETH, WBTC, UNI, LINK, and more
+- ** Responsive Design** - Modern UI with dark mode and mobile optimization
+- ** Live Updates** - Real-time data with 30-second refresh intervals
+- ** Portfolio Tracking** - User position monitoring and analysis
 
 ## Quickstart
 
@@ -37,7 +37,7 @@ npm run dev
 
 4. **Open** [http://localhost:3000](http://localhost:3000)
 
-### 🚀 **Demo Mode**
+###  **Demo Mode**
 The dashboard includes intelligent fallback to **demo mode** when:
 - RPC connection fails
 - Contract calls encounter errors
@@ -55,7 +55,7 @@ The dashboard includes intelligent fallback to **demo mode** when:
 npm run legacy:dev
 ```
 
-## 🏗️ Architecture
+##  Architecture
 
 - **Frontend**: Next.js 14 with TypeScript
 - **Styling**: Tailwind CSS with custom Compound theme
@@ -63,7 +63,7 @@ npm run legacy:dev
 - **State Management**: TanStack Query for real-time data
 - **Blockchain**: Ethers.js for Compound v3 integration
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 src/
@@ -79,7 +79,7 @@ src/
 └── abi/               # Smart contract ABIs
 ```
 
-## 🎯 Hackathon Highlights
+##  Hackathon Highlights
 
 - **Real-time Data**: WebSocket-like updates without WebSockets
 - **Risk Analysis**: Advanced liquidation risk monitoring
@@ -107,7 +107,7 @@ COMET_REWARDS_ADDRESS=0x1B0e765F6224C21223AeA2af16c1C46E38885a40
 - **Local Fork** (Development)
 - **Testnets** (Goerli, Sepolia)
 
-## 🚀 Deployment
+##  Deployment
 
 ### Vercel (Recommended)
 
@@ -123,7 +123,7 @@ docker build -t compound-dashboard .
 docker run -p 3000:3000 compound-dashboard
 ```
 
-## 📈 Analytics & Metrics
+##  Analytics & Metrics
 
 - **Real-time utilization tracking**
 - **APY calculations and comparisons**
@@ -131,7 +131,7 @@ docker run -p 3000:3000 compound-dashboard
 - **Risk assessment algorithms**
 - **Historical data visualization**
 
-## 🔒 Security
+##  Security
 
 - Read-only blockchain interactions
 - No private key requirements
@@ -139,7 +139,7 @@ docker run -p 3000:3000 compound-dashboard
 - Error boundary protection
 - Secure RPC endpoint configuration
 
-## 🤝 Contributing
+##  Contributing
 
 This is a hackathon submission! Feel free to:
 
@@ -149,7 +149,7 @@ This is a hackathon submission! Feel free to:
 4. Extend market support
 5. Add new analytics
 
-## 📄 License
+##  License
 
 MIT License - see LICENSE file for details.
 
